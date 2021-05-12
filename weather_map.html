@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" devi>
+    <title>Weather Map</title>
+    <script src="https://kit.fontawesome.com/968ac4e7b1.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.css' rel='stylesheet' />
+</head>
+<body>
+<style>
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+    body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background-color: #f7f7f7;
+    }
+</style>
+<div style="position: sticky; top: 0; z-index: 1000;">
+    <div id="header" style="display: flex; justify-content: space-between; align-items: center; padding: 12px;">
+        <h3> Codeup Weather App </h3>
+        <div>
+            <label for="input">Place:</label>
+            <input type="text" id="input">
+            <button class="btn btn-primary" id="btn">Find</button>
+        </div>
+    </div>
+    <h4 id="results"></h4>
+    <div id="display"></div>
+</div>
+<div style="width: 80vw; padding: 20px;  margin: auto;">
+<div  id='map' style='width: 100%; height: 50vw;'></div>
+</div>
+
+
+<script src="js/keys.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script src='https://api.mapbox.com/mapbox-gl-js/v2.2.0/mapbox-gl.js'></script>
+<script src="js/mapbox-geocoder-utils.js"></script>
+
+<script>
+    (() =>{
+"use strict"
+    mapboxgl.accessToken = process.env.MAPBOX_ACCESS_TOKEN;
+    var map = new mapboxgl.Map({
+        container: 'map', // container ID
+        style: 'mapbox://styles/mapbox/streets-v11', // style URL
+        center: [-98.4936, 29.4241], // starting position [lng, lat]
+        zoom: 8 // starting zoom
+    });
+var marker = new mapboxgl.Marker({
+    color: 'blue',
+    draggable: true
+})
+    .setLngLat([-98.4936, 29.4241])
+    .addTo(map);
+
+var popup = new mapboxgl.Popup()
+    .setLngLat(marker.getLngLat())
+    .setHTML('<h4 class="font">San Antonio, Tx</h4>')
+    .addTo(map);
+
+var updateCoordinates = {
+    lat: 29.4241,
+    lon: -98.4936,
+}
+
+$('#results').html('Results for: San Antonio').css({
+    color: 'purple',
+    width: '100vw',
+    margin: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    textAlign: 'center'
+})
+
+marker.setPopup(popup);
+marker.on('dragend', function() {
+    var {lat, lng} = marker.getLngLat();
+    updateCoordinates = {lat, lon: lng}
+    getWeatherCoordinates();
+    $('#results').html('')
+    $('#results').append(
+        $('<div/>').append('Results for:'),
+        $('<div/>').append('latitude: ', lat),
+        $('<div/>').append('longitude: ', lng),
+    )
+    marker.setPopup();
+})
+
+function getResults() {
+    var userInput = $("#input").val();
+    geocode(userInput, MAPBOX_ACCESS_TOKEN).then(function ([lng, lat]) {
+        console.log({lng, lat});
+        updateCoordinates = {lat, lon: lng}
+        getWeatherCoordinates()
+        marker.setLngLat({lng, lat});
+        popup.setHTML('<h3 class="font">' + userInput +  '</h3>');
+        map.flyTo({center: {lng, lat}});
+    });
+    $('#results').html('Results for: ' + userInput)
+}
+
+$("#btn").click(getResults);
+    // var coordinates = [29.4241, -98.4936];
+    // // var coordinates = [];
+    // $.ajax('https://api.openweathermap.org/data/2.5/onecall?units=imperial&lat=' + coordinates[0] + '&lon=' + coordinates[1] + '&appid=' + WEATHER_MAP_TOKEN)
+    //     .done(function (resp) {
+    //         console.log(resp);
+    //         var today = resp.daily[0];
+    //         var todayDate = new Date(today.dt * 1000)
+    //         console.log(todayDate);
+    //     });
+    $('#header').css({
+        display: 'flex',
+        background: '#03a9f4',
+        fontWeight: 'bold',
+        color: 'white',
+        fontsize: '75px'
+    })
+    var dateContainer = {
+        fontFamily: 'arial',
+        fontsize: '20px',
+        background: '#f7f7f7',
+        padding: '20px 0'
+    }
+    var bottomBorder = {
+        paddingBottom: '10px',
+        borderBottom: '1px solid #dedede'
+    }
+    function Label(text) {
+        return $('<label/>').append(text).css({ fontWeight: 'bolder' })
+    }
+    function Spinner(width='100px') {
+        return $('<div/>').css({
+            borderTop: '3px solid #0CB1C4',
+            borderLeft: '3px solid #0CB1C4',
+            borderRadius: '50%',
+            width,
+            height: width,
+            margin: '20px',
+            animation: '0.4s ease-in-out 0s infinite normal none running spin'
+        })
+    }
+    var display = $('#display').css({display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '16px', padding: '0 8px'})
+
+function getWeatherCoordinates() {
+        display.html(Spinner())
+    $.get('https://api.openweathermap.org/data/2.5/onecall', {
+        APPID: process.env.WEATHER_MAP_TOKEN,
+        lat: updateCoordinates.lat,
+        lon: updateCoordinates.lon,
+        units: "imperial"
+    }).done(function (resp) {
+        console.log('5 day forcast', resp);
+        display.html('')
+        resp.daily.forEach(function (today, index) {
+            if (index >= 5) return
+            var container = $('<div/>').attr({id: 'data-' + (index + 1)}).css({
+                textAlign: 'center',
+                border: '1px solid #a4a4a4',
+                borderRadius: '4px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                width: '300px',
+                flex: '1 1 250px',
+                background: '#ffffff21',
+                'backdrop-filter': 'blur(5px)'
+            })
+            // ES6
+            var {humidity, wind_speed, pressure, temp, weather, dt} = today
+            display.append(container.append(
+                $('<div/>').append(new Date(dt * 1000).toDateString()).css(dateContainer),
+                $('<div/>').css(bottomBorder).append(parseInt(temp.day), '°'),
+                // string interpelation when using the ` backtic you can insert ${} jquery without concatinating
+                $(`<img style='width: 60px; margin: auto' src="http://openweathermap.org/img/w/${weather[0].icon}.png"/>`), +
+                    $('<div/>').css({padding: '10px'}).append(Label('Description: '), weather[0].description),
+                $('<div/>').css(bottomBorder).append(Label('Humidity: '), humidity),
+                $('<div/>').css(bottomBorder).append(Label('Wind: '), wind_speed),
+                $('<div/>').css(bottomBorder).append(Label('Pressure: '), pressure),
+            ))
+        })
+    });
+}
+getWeatherCoordinates()
+//David Walsh Blog: https://davidwalsh.name › javascript-debounce-function
+function debounce(func, wait, immediate) {
+    var timeout;
+    return function() {
+        var context = this, args = arguments;
+        var later = function() {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+        };
+        var callNow = immediate && !timeout;
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+    };
+};
+var getWeather = debounce(getResults, 1000)
+$("#input").keyup(getWeather)
+})()
+</script>
+</body>
+</html>
